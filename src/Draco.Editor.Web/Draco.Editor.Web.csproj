@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+    
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+
+    <!-- Disable WebCIL for now. We have custom code to tell mono to start running .NET Code, this will need a refactoring to support WebCIL.  -->
+    <WasmEnableWebcil>false</WasmEnableWebcil>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ICSharpCode.Decompiler" Version="8.2.0.7535" ExcludeAssets="contentfiles" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.JSInterop" Version="8.0.1" />
+    <PackageReference Include="Draco.Compiler" Version="0.3.4-pre" />
+  </ItemGroup>
+
+  <Target Name="JSSetup" AfterTargets="AfterBuild">
+    <Exec Command="npm install" WorkingDirectory="app"></Exec>
+    <Exec Condition="'$(Configuration)' == 'Debug'" Command="npm run build-debug" WorkingDirectory="app"></Exec>
+    <Exec Condition="'$(Configuration)' == 'Release'" Command="npm run build-release" WorkingDirectory="app"></Exec>
+  </Target>
+
+   <ItemGroup>
+     <!-- Force VS to ignore ts files. -->
+    <Compile Remove="app\**" />
+    <Content Remove="app\**" />
+    <EmbeddedResource Remove="app\**" />
+    <None Remove="app\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.NETCore.App.Ref" Version="[8.0.1]" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)microsoft.netcore.app.ref\8.0.1\ref\net8.0\*.dll"
+                      LogicalName="ReferenceAssembly.%(Filename)%(Extension)"
+                      Visible="false"
+                      Link="Reference Assemblies\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
