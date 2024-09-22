@@ -1,8 +1,13 @@
 import { blobToBase64 } from './helpers.js';
 import { buildDate } from './metadata.js';
 
+// this is a dll cache to avoid downloading the same assembly multiple times.
+
 const elements = [];
 
+// when you download assemblies, we have a progress bar to show the download progress.
+// to be honest it also have a cool factor and i like it.
+// it also make people patient to have a progress bar :p.
 export function getDownloadViewElement() {
     const downloadViewElement = document.createElement('div');
     downloadViewElement.classList.add('monaco-editor');
@@ -15,6 +20,10 @@ export function getDownloadViewElement() {
     return downloadViewElement;
 }
 
+// dotnet js would download every single assembly every single time,
+// it provided a way to have custom logic back thenn, but it simply didnt worked, and it was not documented at all.
+// a way i found by browsing the code, is that if you sets the buffer field, it wont download the dll and use the buffer as the dll.
+// so we take the dotnet js config, download/pull from cache all the dll listed in it, and set the buffer field.
 export async function downloadAssemblies(cfg: unknown) {
     await ensureCacheUpToDate();
     const assets = cfg['assets'];
@@ -89,10 +98,6 @@ async function downloadAssembly(dlPath: string, asset: unknown): Promise<void> {
     progresses.forEach(progress => {
         progress.parentElement.remove();
     });
-}
-
-function wait(milliseconds) {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 async function progressFetch(url: string, onProgress: (loaded: number, total: number) => void): Promise<Blob> {

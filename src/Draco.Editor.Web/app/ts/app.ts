@@ -8,6 +8,8 @@ import { TextInput } from './LayoutComponents/TextInput.js';
 import { loadThemes } from './loadThemes.js';
 import { Settings } from './LayoutComponents/Settings.js';
 
+// this file is the entry point.
+
 function updateHash(code: string) {
     // setting the URL Hash with the state of the editor.
     // Doing this before invoking DotNet will allow sharing hard crash.
@@ -18,8 +20,9 @@ function updateHash(code: string) {
     buffer.set(compressed, 1);
     history.replaceState(undefined, undefined, '#' + fromBase64ToBase64URL(toBase64(buffer)));
 }
-// This file is run on page load.
-// This run before blazor load, and will tell blazor to start.
+
+// that's because monaco doesn't help you when you have a bundler, you have to do it by hand.
+// https://github.com/microsoft/monaco-editor/blob/main/samples/browser-esm-esbuild/index.js
 
 self.MonacoEnvironment = {
     // Web Workers need to start a new script, by url.
@@ -29,7 +32,7 @@ self.MonacoEnvironment = {
     }
 };
 
-const hash = window.location.hash.slice(1);
+const hash = window.location.hash.slice(1); // retrieve hash, which contain the stored code.
 export let inputCode = `import System.Console;
 
 func main() {
@@ -109,12 +112,13 @@ goldenLayout.registerComponentConstructor('Settings', Settings);
 
 goldenLayout.loadLayout(config);
 const inputEditor = TextInput.editors[0];
-inputEditor.getModel().onDidChangeContent(() => {
+inputEditor.getModel().onDidChangeContent(() => { // when the input editor content change...
     const code = inputEditor.getModel().getValue();
-    setCode(code);
-    updateHash(code);
+    setCode(code); // this sends the code to the dotnet worker.
+    updateHash(code); // and update the hash of the URL.
 });
-subscribeOutputChange((arg) => {
+
+subscribeOutputChange((arg) => { // and this piece of code that have nothing to do here, update the xterm terminal with what the dotnet worker sent.
     if (arg.outputType == 'stdout') {
         if (arg.clear) {
             StdOut.terminals[0].reset();
@@ -123,5 +127,5 @@ subscribeOutputChange((arg) => {
     }
 });
 
-loadThemes();
+loadThemes(); // this does the black magic in order to have vscode theme on monaco.
 initDotnetWorkers(inputCode);

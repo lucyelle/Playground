@@ -3,6 +3,8 @@ import { ComponentContainer } from 'golden-layout';
 import { getDownloadViewElement } from '../cache.js';
 import { subscribeOutputChange } from '../dotnet.js';
 
+// this setup a readonly monaco editor to view code output (IR/IL)
+
 export class TextDisplay {
     static editors = {};
 
@@ -17,8 +19,8 @@ export class TextDisplay {
         div.classList.add('output-viewer');
         this.rootElement.appendChild(div);
         const editor = monaco.editor.create(div, {
-            theme: 'dynamic-theme',
-            language: container.title.toLowerCase(),
+            theme: 'dynamic-theme', // this is a theme with create that we update dynamically when the user change the theme
+            language: container.title.toLowerCase(), // we use the title of the container to set the language
             readOnly: true,
             scrollbar: {
                 vertical: 'visible'
@@ -38,6 +40,8 @@ export class TextDisplay {
             editor.layout();
         });
         subscribeOutputChange((arg) => {
+            // subscribeOutputChange fire when there is a new 'output',
+            // the title of our container correspond to the type of output it display.
             if (arg.outputType == container.title) {
                 editor.setValue(arg.value);
             }

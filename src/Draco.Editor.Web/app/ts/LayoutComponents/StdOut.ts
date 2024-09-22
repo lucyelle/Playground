@@ -3,6 +3,10 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { getDownloadViewElement } from '../cache.js';
 
+
+/**
+ * This simply setup a xterm (it's what vscode uses) terminal
+ */
 export class StdOut {
     static terminals: Terminal[] = [];
 

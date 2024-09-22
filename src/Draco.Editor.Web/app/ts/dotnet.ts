@@ -1,4 +1,5 @@
 import { downloadAssemblies } from './cache.js';
+// this file handle the communication with the .NET worker.
 
 const compilerWorker = new Worker('worker.js'); // first thing: we start the worker so it loads in parallel.
 let runtimeWorker: Worker | undefined;
@@ -11,21 +12,30 @@ compilerWorker.onmessage = async (ev) => {
         message: string;
     };
     switch (msg.type) {
-    case 'setOutputText': {
+    case 'setOutputText': { // the worker is sending us some output
         const parsed = JSON.parse(msg.message);
         onOutputChange(parsed['OutputType'], parsed['Text'], true);
         break;
     }
-    case 'runtimeAssembly': {
+    case 'runtimeAssembly': { // the worker sent a compiled dll to run.
         if (runtimeWorker != undefined) {
             runtimeWorker.terminate();
         }
         onOutputChange('stdout', 'Loading script\'s .NET Runtime...', true);
+
         runtimeWorker = new Worker('worker.js');
+
+        // our small dotnet wrapper around the compiler:
+        // listed all the assemblies that this dll will need
+        // and built a json that mono wasm understand to run a .NET dll.
+
+        // the small wrapepr part generate an ideal config file, this script here bring the reality back to it: dotnet js api is far from being usable.
         const cfg = JSON.parse(msg.message);
         console.log('Starting worker with boot config:');
-        cfg['disableInterop'] = true;
+
+        cfg['disableInterop'] = true; // we don't do js-dotnet interop in user dlls for now.
         const assets = cfg['assets'];
+        // for some reason, mono js really need these two files. why does it doesn't do itself ? good question.
         assets.unshift({
             name: jsModuleNativeName,
             behavior: 'js-module-native',
@@ -34,8 +44,8 @@ compilerWorker.onmessage = async (ev) => {
             name: jsModuleRuntimeName,
             behavior: 'js-module-runtime',
         });
-        await downloadAssemblies(cfg);
-        runtimeWorker.postMessage(cfg);
+        await downloadAssemblies(cfg); // this download the assemblies by ourself, i explain in the function why we do that.
+        runtimeWorker.postMessage(cfg); // we send the config to the worker.
         let shouldClean = true;
         runtimeWorker.onmessage = (e) => {
             const runtimeMsg = e.data as {
@@ -84,9 +94,14 @@ export function unsubscribeOutputChange(listener: (arg: { outputType: string; va
 }
 
 export async function initDotnetWorkers(initCode: string) {
+    // msbuild generated a shiny file for dotnet js, it's called blazor even if we don't use blazor
     const cfg = await (await fetch('_framework/blazor.boot.json')).json();
+    // dotnet js doesn't cache dlls, so we again use our download mechanism to cache them.
+    // also, there is multiple way to structure this config file, because why not.
+    // and the way msbuild generate this file, don't allow to use the buffer trick explained in cache.ts.
+    // so I recreate the config file, using this config structure that i understand.
     console.log(cfg);
-    const assets: unknown[] = Object.keys(cfg.resources.assembly).map(
+    const assets: unknown[] = Object.keys(cfg.resources.assembly).map( // this rewrite the msbuild generated config into the config structure i use.
         s => {
             return {
                 'behavior': 'assembly',
@@ -98,6 +113,11 @@ export async function initDotnetWorkers(initCode: string) {
         'behavior': 'dotnetwasm',
         'name': 'dotnet.native.wasm'
     });
+
+    // if i remember correctly, the file structure they use have dedicated fields to specify theses 2 files
+    // since we don't use their file strucutre, we have to add them manually.
+    // Luckily, we can just pull the value from the msbuild generated file.
+
     jsModuleNativeName = Object.keys(cfg['resources']['jsModuleNative'])[0];
     assets.unshift({
         name: jsModuleNativeName,

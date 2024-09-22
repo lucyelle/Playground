@@ -20,6 +20,9 @@ const outDir = path.join(__dirname, distDir);
 const binFolder = process.argv[2];
 const debug = binFolder.includes('Debug');
 
+// rebundling the dotnet.js with vite bundler
+// this was needed because firefox didn't supported esmodule in webworker
+// it does now (the bugzilla ticket i followed on the subject was completed), so it may not be needed anymore.
 async function dotnetjsBuild() {
     await viteBuild(defineConfig({ // Yes, I'm using another bundler, because this one bundle correctly dotnet.js to CJS...
         build: {

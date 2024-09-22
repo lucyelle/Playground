@@ -1,3 +1,6 @@
+// this simply take two svg, slap a css media query so a single image can be used for both light and dark theme
+// this is necessary for the favicon, to have dark/light favicon
+
 function stripXMLHeader(xml) {
     const indexOf = xml.indexOf('\n');
     return xml.slice(indexOf);
